@@ -213,18 +213,44 @@ SSH 依赖 `paramiko` 库，Windows/macOS/Linux 均可正常工作。
 
 ## 操作文档
 
-项目附带 Windchill 操作文档，位于 `docs/` 目录：
+项目附带 **24 篇 Windchill 操作文档**，位于 `docs/` 目录，涵盖安装配置、故障排查、运维 SOP 等。
 
+### 安装配置类
 | 文档 | 说明 |
 |------|------|
-| `Windchill-创建物料操作手册.md` | 物料创建流程和规范 |
-| `Windchill-零部件搜索指南.md` | 零件搜索方法和技巧 |
-| `Windchill-BOM搭建指南.md` | BOM 结构搭建指南 |
-| `Windchill-变更管理流程.md` | 变更申请/变更单流程 |
-| `Windchill-产品结构导出指南.md` | 产品结构数据导出 |
-| `Windchill-图纸发布流程.md` | 工程图纸发布流程 |
+| `Windchill-集群安装配置指南` | 集群部署和配置 |
+| `Windchill-Worker安装配置指南` | Worker Agent 安装 |
+| `Windchill-系统安装指南` | 系统安装 |
+| `Windchill-AD集成配置指南` | AD 集成 |
+| `Windchill-副本站点配置指南` | 副本站点部署 |
+| `Windchill-移动端配置指南` | 移动端配置 |
+| `Windchill-ThingWorx集成指南` | ThingWorx 集成 |
 
-在交互终端输入 `docs` 查看文档列表，或用 `open docs/filename.md` 打开。
+### 排查指南类
+| 文档 | 说明 |
+|------|------|
+| `Windchill-BOM排查指南` | BOM 问题排查 |
+| `Windchill-OData排查指南` | OData API 问题 |
+| `Windchill-MethodServer排查指南` | MethodServer 问题 |
+| `Windchill-工作流排查指南` | 工作流问题 |
+| `Windchill-电子仓库排查指南` | 电子仓库问题 |
+| `Windchill-可视化失败处理指南` | 可视化问题 |
+| `Windchill-Solr索引排查指南` | Solr 索引问题 |
+| `Windchill-许可证排查指南` | 许可证问题 |
+| `Windchill-ERP集成排查指南` | ERP 集成问题 |
+| `Windchill-PartsLink排查指南` | PartsLink 问题 |
+| `Windchill-WorkgroupManager排查指南` | WGM 问题 |
+
+### 运维 SOP 类
+| 文档 | 说明 |
+|------|------|
+| `Windchill-RehostSOP` | 系统迁移标准流程 |
+| `Windchill-克隆系统SOP` | 系统克隆标准流程 |
+| `Windchill-升级迁移指南` | 升级迁移 |
+| `Windchill-系统性能优化指南` | 性能优化 |
+| `Windchill-类型属性配置SOP` | 类型属性配置 |
+
+在 `ask` 命令中直接提问即可检索这些文档。
 
 ## 项目结构
 
