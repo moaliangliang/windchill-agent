@@ -1,4 +1,37 @@
-"""配置管理 — 从 .env 文件或环境变量读取"""
+"""配置管理 — 从 .env 文件或环境变量读取
+
+支持的配置项:
+
+Windchill REST API:
+  WINDCHILL_HOST           Windchill 服务器地址 (必填)
+  WINDCHILL_HTTP_PORT      Windchill HTTP 端口 (默认 7380)
+  WINDCHILL_ODATA_USER     OData API 用户名 (默认 wcadmin)
+  WINDCHILL_ODATA_PASSWORD OData API 密码 (必填)
+
+SSH (MethodServer/Oracle 管理):
+  WINDCHILL_SSH_HOST       SSH 服务器地址
+  WINDCHILL_SSH_PORT       SSH 端口 (22)
+  WINDCHILL_SSH_USER       SSH 用户名
+  WINDCHILL_SSH_PASSWORD   SSH 密码
+  WINDCHILL_SSH_KEY        SSH 私钥路径
+  WINDCHILL_HOME           Windchill 安装目录 (/opt/Windchill)
+
+Oracle 数据库:
+  ORACLE_HOST              Oracle 服务器地址
+  ORACLE_PORT              Oracle 端口 (1521)
+  ORACLE_SID               Oracle SID
+  ORACLE_USER              Oracle 用户
+  ORACLE_PASSWORD          Oracle 密码
+  ORACLE_HOME              Oracle 安装目录
+
+企业微信通知:
+  WECOM_WEBHOOK_URL        企业微信机器人 Webhook
+  WECOM_CORP_ID            企业微信 CorpID
+  WECOM_AGENT_ID           企业微信 AgentID
+  WECOM_CORP_SECRET        企业微信 Secret
+
+配置加载优先级: 环境变量 > .env 文件
+"""
 import os
 from pathlib import Path
 from typing import Optional
