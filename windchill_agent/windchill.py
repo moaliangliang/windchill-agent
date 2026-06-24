@@ -833,19 +833,9 @@ def send_wecom_message(user_id: str = "@all", content: str = "") -> str:
 # 从 knowagent 迁移的函数（共 35 个）
 # ═══════════════════════════════════════════════════════════
 
-def windchill_add_bom_item(parent_number: str, child_number: str, quantity: float = 1.0) -> str:
-    """向 Windchill 物料的 BOM 中添加子件。parent_number=父物料编号, child_number=子件编号, quantity=数量(默认1)。自动处理检出→添加→检入。"""
-    try:
-        client = _get_wc_client()
-        result = client.add_part_use(parent_number, child_number, quantity)
-        client.close()
-        if result.get("success"):
-            return f"✅ 已成功向物料 {parent_number} 的 BOM 中添加子件 [{child_number}]，数量 {quantity}。系统已自动完成检出→添加→检入。"
-        return "添加失败"
-    except ValueError as e:
-        return str(e)
-    except Exception as e:
-        return json.dumps({"error": f"添加 BOM 子件失败: {str(e)}"})
+def windchill_add_bom_item(*args, **kwargs) -> str:
+    """向 BOM 中添加子件 — 需要 OData API 支持，未部署到独立项目"""
+    return "❌ 此功能需要 Windchill OData API 支持（未部署到独立项目）"
 
 def windchill_create_co(subject: str, description: str = "") -> str:
     """创建工程变更通告(CO/ECN)。OData ChangeMgmt API 不支持 CREATE 操作，需通过 SSH + WindchillAgent 执行。"""
@@ -855,103 +845,13 @@ def windchill_create_cr(subject: str, description: str = "") -> str:
     """创建工程变更请求(CR)。OData ChangeMgmt API 不支持 CREATE 操作，需通过 SSH + WindchillAgent 执行。"""
     return _wc_run("create_cr", subject, description)
 
-def windchill_create_document(name: str, title: str = "", description: str = "", filepath: str = "") -> str:
-    """在 Windchill 中创建新文档。name=文档名称, title=文档标题(可选), description=文档描述/内容(可选), filepath=上传文件路径(可选，提供后自动上传文件作为主内容)"""
-    import os
-    try:
-        # 先检查文件是否存在（支持容器内 /host 挂载路径）
-        actual_path = filepath
-        if filepath:
-            if not os.path.exists(filepath):
-                host_path = '/host' + filepath
-                if os.path.exists(host_path):
-                    actual_path = host_path
-                else:
-                    return f"⚠️ 文件不存在: {filepath}\n请确认文件路径是否正确。文档尚未创建。"
-            if not os.path.isfile(actual_path):
-                return f"⚠️ 路径不是文件: {filepath}"
+def windchill_create_document(*args, **kwargs) -> str:
+    """创建 Windchill 文档 — 需要 OData API 支持"""
+    return "❌ 此功能需要 Windchill OData API 支持（未部署到独立项目）"
 
-        client = _get_wc_client()
-        result = client.create_document(name=name, title=title or name, description=description)
-        created = result.get("value", [{}])[0]
-        doc_id = created.get("ID", "")
-        doc_num = created.get("Number", "")
-        client.close()
-
-        upload_info = ""
-        upload_error = ""
-        if actual_path and os.path.exists(actual_path):
-            try:
-                import urllib.request as _ur, ssl as _ssl, json as _json
-                with open(actual_path, "rb") as f:
-                    file_content = f.read()
-                base_name = os.path.basename(filepath)
-                ext = os.path.splitext(base_name)[1].lower()
-                mime_map = {'.txt': 'text/plain', '.pdf': 'application/pdf', '.doc': 'application/msword',
-                            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                            '.xls': 'application/vnd.ms-excel', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                            '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-                            '.zip': 'application/zip', '.md': 'text/markdown', '.py': 'text/x-python'}
-                mime_type = mime_map.get(ext, 'application/octet-stream')
-                # 直接三阶上传（不检出）
-                h_base = {"Authorization": f"Basic {base64.b64encode(b'wcadmin:wcadmin').decode()}"}
-                import httpx as _httpx
-                hc = _httpx.Client(verify=False, timeout=60)
-                base_url = f"http://{getattr(settings,'windchill_host','61.169.97.58')}:7380/Windchill/servlet/odata"
-                nonce = hc.get(f"{base_url}/v2/PTC/GetCSRFToken()", headers=h_base).json().get("NonceValue","")
-                h = {**h_base, "CSRF_NONCE": nonce, "Content-Type": "application/json"}
-                s1 = hc.post(f"{base_url}/v6/DocMgmt/Documents('{doc_id}')/PTC.DocMgmt.UploadStage1Action", json={"NoOfFiles":1}, headers=h)
-                cache = s1.json()["value"][0]
-                sid = str(cache["FileNames"][0])
-                bound = f"----Boundary_{sid}"
-                mp = (f"--{bound}\r\nContent-Disposition: form-data; name=\"Master_URL\"\r\n\r\n{cache['MasterUrl']}\r\n"
-                      f"--{bound}\r\nContent-Disposition: form-data; name=\"CacheDescriptor_array\"\r\n\r\n{sid}:{sid}:{sid}:{len(file_content)};\r\n"
-                      f"--{bound}\r\nContent-Disposition: form-data; name=\"{sid}\"; filename=\"{base_name}\"\r\nContent-Type: {mime_type}\r\n\r\n").encode() + file_content + (f"\r\n--{bound}--\r\n").encode()
-                s2_h = {"Content-Type": f"multipart/form-data; boundary={bound}", "CSRF_NONCE": nonce,
-                        "Authorization": f"Basic {base64.b64encode(b'wcadmin:wcadmin').decode()}",
-                        "PTC-Applied-Container-Context": "Default"}
-                ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
-                s2_r = _ur.urlopen(_ur.Request(cache['ReplicaUrl'], data=mp, headers=s2_h, method="POST"), timeout=60, context=ctx)
-                ci = _json.loads(s2_r.read())["contentInfos"][0]
-                nonce = hc.get(f"{base_url}/v2/PTC/GetCSRFToken()", headers=h_base).json().get("NonceValue","")
-                h = {**h_base, "CSRF_NONCE": nonce, "Content-Type": "application/json"}
-                s3 = hc.post(f"{base_url}/v6/DocMgmt/Documents('{doc_id}')/PTC.DocMgmt.UploadStage3Action",
-                    json={"ContentInfo":[{"StreamId":ci["streamId"],"EncodedInfo":ci["encodedInfo"],"FileName":base_name,
-                                         "PrimaryContent":True,"MimeType":mime_type,"FileSize":ci["fileSize"]}]}, headers=h)
-                hc.close()
-                if s3.status_code in (200, 201):
-                    upload_info = f"\n  ✅ 上传文件: {base_name} ({len(file_content)} 字节)"
-                else:
-                    upload_error = f"\n  ⚠️ 上传失败 (HTTP {s3.status_code})"
-            except Exception as e:
-                upload_error = f"\n  ⚠️ 上传出错: {str(e)[:200]}"
-
-        desc_preview = (description[:80].replace('\n', '\\n') + "...") if description else "无"
-        return (
-            f"文档创建{'成功' if not upload_error else '成功但上传失败'}！\n"
-            f"  编号: {doc_num}\n"
-            f"  名称: {created.get('Name', '')}\n"
-            f"  版本: {created.get('Version', '')}"
-            f"{upload_info}"
-            f"{upload_error}\n"
-            f"  描述: {desc_preview}"
-        )
-    except Exception as e:
-        return json.dumps({"error": f"创建文档失败: {str(e)}"})
-
-def windchill_delete_bom_item(parent_number: str, child_number: str) -> str:
-    """删除 Windchill 物料的 BOM 子件。parent_number=父物料编号, child_number=要删除的子件编号。自动处理检出→删除→检入。"""
-    try:
-        client = _get_wc_client()
-        result = client.delete_part_use(child_number, parent_number)
-        client.close()
-        if result.get("success"):
-            return f"✅ 已成功从物料 {parent_number} 的 BOM 中删除子件 {child_number}。系统已自动完成检出→删除→检入。"
-        return "删除失败"
-    except ValueError as e:
-        return str(e)
-    except Exception as e:
-        return json.dumps({"error": f"删除 BOM 子件失败: {str(e)}"})
+def windchill_delete_bom_item(*args, **kwargs) -> str:
+    """从 BOM 中删除子件 — 需要 OData API 支持"""
+    return "❌ 此功能需要 Windchill OData API 支持（未部署到独立项目）"
 
 def windchill_generate_class_xml(name: str, nodes: str = "") -> str:
     """生成 Windchill 分类定义 XML 文件。name=分类树名称，nodes=JSON数组：[{"name":"标准件","internalName":"Standard","children":[{"name":"螺栓","attributes":[{"name":"规格","type":"STRING"}]}]}]"""
@@ -1107,19 +1007,21 @@ def windchill_generate_type_xml(name: str, base_type: str = "WTPart", attributes
         return json.dumps({"error": f"生成 XML 失败: {str(e)}"})
 
 def windchill_query_by_name(name: str) -> str:
-    """按物料名称模糊搜索 Windchill 物料列表"""
+    """按物料名称模糊搜索 Windchill 物料"""
+    if not name:
+        return "❌ 需要 name 参数"
     try:
-        client = _get_wc_client()
-        parts = client.query_part_by_name(name)
-        client.close()
-        if parts:
-            result = f"找到 {len(parts)} 个物料:\n\n"
-            for p in parts:
-                result += f"- {p.get('Number','')} | {p.get('Name','')} | v{p.get('Version','')} | {p.get('State',{}).get('Display','')}\n"
-            return result
-        return f"未找到名称包含「{name}」的物料。"
+        filter_str = f"contains(Name,'{name}')"
+        data = _odata_get("PartMgmt/Parts", params={"$filter": filter_str, "$top": "20"})
+        parts = data.get("value", [])
+        if not parts:
+            return f"❌ 未找到名称包含「{name}」的物料"
+        lines = [f"🔍 找到 {len(parts)} 个物料:"]
+        for p in parts:
+            lines.append(f"  • {p.get('Number','?')} | {p.get('Name','?')} | v{p.get('Version','?')}")
+        return "\n".join(lines)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return f"❌ 查询失败: {e}"
 
 def windchill_add_worker(name: str = "OFFICE", host: str = "VM73", exe_path: str = "", instances: str = "1", worker_type: str = "") -> str:
     """添加新的 Windchill Worker Agent 工作器（通过修改 agent.ini）。

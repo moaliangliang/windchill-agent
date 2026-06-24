@@ -45,13 +45,10 @@ HELP_TEXT = f"""
   {C.GREEN}view_log <filename>{S.RESET_ALL}              查看日志内容
   {C.GREEN}partlists / problems / variances{S.RESET_ALL}  清单/问题/偏差
 
-{Style.BRIGHT}创建/修改类 (14):{S.RESET_ALL}
+{Style.BRIGHT}创建/修改类 (8):{S.RESET_ALL}
   {C.GREEN}create_part <编码> <名称>{S.RESET_ALL}        创建零件
-  {C.GREEN}create_co / create_cr / create_doc{S.RESET_ALL} 创建变更单/申请/文档
-  {C.GREEN}bom_add / bom_del <编码> <子件>{S.RESET_ALL}  BOM 添加/删除子件
   {C.GREEN}revise / update <编码>{S.RESET_ALL}            修订/更新零件
-  {C.GREEN}obsolete / delete <编码>{S.RESET_ALL}          报废/删除零件
-  {C.GREEN}edit_labels / update_props{S.RESET_ALL}        编辑安全标签/更新属性
+  {C.GREEN}obsolete <编码>{S.RESET_ALL}                   报废零件
   {C.GREEN}preference <name> <value>{S.RESET_ALL}         设置首选项
 
 {Style.BRIGHT}审批/任务类 (5):{S.RESET_ALL}
