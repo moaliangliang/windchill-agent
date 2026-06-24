@@ -1,8 +1,8 @@
 # Windchill Agent
 
-跨平台 Windchill/Oracle 运维工具，支持 **Windows / macOS / Linux**。
+> 跨平台 Windchill/Oracle PLM 运维工具 | **54 个工具函数** | 支持 Windows / macOS / Linux | 基于 OData REST API + SSH
 
-通过 Windchill OData REST API 和 SSH 实现完整的 Windchill PLM 运维能力，包括零件查询、BOM 展开、变更管理、任务审批、服务器管理、Oracle 运维等。
+通过 Windchill OData REST API 和 SSH 实现完整的 Windchill PLM 运维能力，包括零件查询、BOM 展开、变更管理、任务审批、MethodServer 控制、Oracle 运维、Worker Agent 管理、系统克隆/迁移等。
 
 ## 快速开始
 
