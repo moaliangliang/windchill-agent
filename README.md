@@ -19,11 +19,11 @@ cp .env.example .env
 python agent.py
 
 # 单条命令模式
-python agent.py status
-python agent.py part NRV-SV-01-P01-01015
-python agent.py bom NRV-SV-01-P01-01015
-python agent.py oracle status
-python agent.py sql "SELECT COUNT(*) FROM WTUSER"
+windchill methodserver status
+windchill oracle status
+windchill sql "SELECT * FROM WTUSER"
+windchill logs file_pattern=MethodServer
+windchill full_status
 ```
 
 ## 功能详情

@@ -49,11 +49,15 @@ HELP_TEXT = f"""
   {C.GREEN}help / exit{S.RESET_ALL}                         帮助 / 退出
 
 {Style.DIM}所有操作基于 SSH，无需 OData API。
-示例:
-  methodserver restart       重启 MethodServer
-  oracle tablespace          查看表空间
-  sql SELECT * FROM...       执行 SQL
-  logs file_pattern=Method   查日志{S.RESET_ALL}
+单条命令模式:
+  windchill methodserver status        查 MethodServer 状态
+  windchill oracle status              查 Oracle 状态
+  windchill sql "SELECT * FROM..."      执行 SQL
+  windchill logs file_pattern=Method   查日志
+
+交互模式直接输入命令:
+  methodserver restart
+  oracle tablespace{S.RESET_ALL}
 """
 
 
