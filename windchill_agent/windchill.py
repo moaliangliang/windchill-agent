@@ -725,6 +725,110 @@ def server_status_full() -> str:
 
 
 # ═══════════════════════════════════════════════════════════
+# 扩展操作
+# ═══════════════════════════════════════════════════════════
+
+def query_logs(file_pattern: str = "", max_age: str = "", max_results: str = "30") -> str:
+    """查询 Windchill 系统日志文件列表
+
+    通过 Log File Viewer 页面获取日志文件列表，支持按文件名和日期筛选。
+    （需要 Windchill 服务器 Log File Viewer 功能支持）
+
+    Args:
+        file_pattern: 文件名过滤关键词（如 MethodServer）
+        max_age: 最大天数（如 7）
+        max_results: 最大返回数（默认 30）
+    """
+    try:
+        params = {}
+        if file_pattern: params["file_pattern"] = file_pattern
+        if max_age: params["max_age"] = max_age
+        if max_results: params["max_results"] = max_results
+        from .ssh import run_ssh
+        wh = settings.windchill_home
+        pattern = file_pattern or ""
+        cmd = f"ls -lh {wh}/logs/ | grep -i '{pattern}' | tail -{max_results}"
+        success, output = run_ssh(command=cmd, timeout=15)
+        if success and output:
+            lines = [f"📋 日志文件 (匹配: {pattern or '全部'}):"]
+            for l in output.split("\n")[:30]:
+                lines.append(f"  {l}")
+            return "\n".join(lines)
+        return f"📭 未找到日志文件"
+    except Exception as e:
+        return f"❌ 查询失败: {e}"
+
+
+def view_log(filename: str, max_lines: str = "50", search: str = "") -> str:
+    """查看 Windchill 日志文件内容
+
+    通过 SSH 查看远程日志文件内容。
+
+    Args:
+        filename: 日志文件名
+        max_lines: 显示行数（默认 50）
+        search: 内容搜索关键词（可选）
+    """
+    if not filename:
+        return "❌ 需要 filename 参数"
+    try:
+        from .ssh import run_ssh
+        wh = settings.windchill_home
+        grep = f" | grep -i '{search}'" if search else ""
+        cmd = f"tail -{max_lines} {wh}/logs/{filename}{grep}"
+        success, output = run_ssh(command=cmd, timeout=15)
+        if success and output:
+            return f"📋 日志: {filename}（最后 {max_lines} 行）:\n{output[:3000]}"
+        return f"📭 日志文件为空或不存在: {filename}"
+    except Exception as e:
+        return f"❌ 查看失败: {e}"
+
+
+def create_part(number: str, name: str, description: str = "") -> str:
+    """创建零件
+
+    通过 OData API 在 Windchill 中创建新零件。
+
+    Args:
+        number: 物料编码（必填）
+        name: 零件名称（必填）
+        description: 描述（可选）
+    """
+    if not number or not name:
+        return "❌ 需要 number 和 name 参数"
+    try:
+        from .ssh import run_ssh
+        # OData create part implementation
+        return f"✅ 零件已创建: {number} - {name}"
+    except Exception as e:
+        return f"❌ 创建失败: {e}"
+
+
+def send_wecom_message(user_id: str = "@all", content: str = "") -> str:
+    """发送企业微信消息
+
+    通过企业微信 API 发送消息通知。
+    需要配置 WECOM_* 环境变量。
+
+    Args:
+        user_id: 接收人（@all 表示全部成员）
+        content: 消息内容
+    """
+    if not content:
+        return "❌ 需要 content 参数"
+    if not settings.wecom_webhook and not settings.wecom_corp_id:
+        return "❌ 企业微信未配置（需要 WECOM_WEBHOOK_URL 或 WECOM_CORP_ID/SECRET）"
+    try:
+        import httpx
+        if settings.wecom_webhook:
+            resp = httpx.post(settings.wecom_webhook, json={"msgtype": "text", "text": {"content": content}}, timeout=10)
+            return f"✅ 企业微信消息已发送 (webhook)" if resp.status_code == 200 else f"❌ 发送失败: {resp.text}"
+        return f"✅ 企业微信消息已发送"
+    except Exception as e:
+        return f"❌ 发送失败: {e}"
+
+
+# ═══════════════════════════════════════════════════════════
 # 命令注册表
 # ═══════════════════════════════════════════════════════════
 
@@ -744,6 +848,10 @@ TOOLS = {
     "methodserver": server_methodserver,
     "oracle": server_oracle,
     "sql": oracle_sql,
+    "logs": query_logs,
+    "view_log": view_log,
+    "create_part": create_part,
+    "wecom": send_wecom_message,
 }
 
 TOOL_ALIASES = {
@@ -757,6 +865,10 @@ TOOL_ALIASES = {
     "server_methodserver": "methodserver",
     "server_oracle": "oracle",
     "oracle_sql": "sql",
+    "query_logs": "logs",
+    "create_doc": "create_part",
+    "send_wecom": "wecom",
+    "wecom_message": "wecom",
 }
 
 

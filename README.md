@@ -231,6 +231,22 @@ Oracle实例已关闭...
 所有 Windchill/Oracle 操作基于 HTTP/SSH，与操作系统无关。
 SSH 依赖 `paramiko` 库，Windows/macOS/Linux 均可正常工作。
 
+## 操作文档
+
+项目附带 Windchill 操作文档，位于 `docs/` 目录：
+
+| 文档 | 说明 |
+|------|------|
+| `Windchill-创建物料操作手册.md` | 物料创建流程和规范 |
+| `Windchill-零部件搜索指南.md` | 零件搜索方法和技巧 |
+| `Windchill-BOM搭建指南.md` | BOM 结构搭建指南 |
+| `Windchill-变更管理流程.md` | 变更申请/变更单流程 |
+| `Windchill-产品结构导出指南.md` | 产品结构数据导出 |
+| `Windchill-图纸发布流程.md` | 工程图纸发布流程 |
+| `WRS安装说明.md` | WRS 安装部署说明 |
+
+在交互终端输入 `docs` 查看文档列表，或用 `open docs/filename.md` 打开。
+
 ## 项目结构
 
 ```

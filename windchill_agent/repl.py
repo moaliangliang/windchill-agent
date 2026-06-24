@@ -48,10 +48,16 @@ HELP_TEXT = f"""
   {C.GREEN}methodserver <status/start/stop>{S.RESET_ALL}  MethodServer 控制
   {C.GREEN}oracle <status/tablespace>{S.RESET_ALL}        Oracle 运维
   {C.GREEN}sql <SQL>{S.RESET_ALL}             执行 Oracle SQL
+  {C.GREEN}logs [file_pattern=xxx]{S.RESET_ALL}  查询日志列表
+  {C.GREEN}view_log <filename>{S.RESET_ALL}      查看日志内容
 
 {Style.BRIGHT}审批操作:{S.RESET_ALL}
   {C.GREEN}approve <task_id>{S.RESET_ALL}      审批任务
   {C.GREEN}reject <task_id> <原因>{S.RESET_ALL} 驳回任务
+
+{Style.BRIGHT}其他:{S.RESET_ALL}
+  {C.GREEN}wecom <content>{S.RESET_ALL}        发送企业微信消息
+  {C.GREEN}docs{S.RESET_ALL}                  打开操作文档目录
 
 {Style.BRIGHT}系统:{S.RESET_ALL}
   {C.GREEN}config{S.RESET_ALL}                查看配置（含OS类型）
@@ -121,6 +127,19 @@ def execute_command(cmd: str, params: dict) -> Optional[str]:
 
     if cmd == "config":
         print(settings.summary())
+        return None
+
+    if cmd == "docs":
+        docs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
+        if os.path.exists(docs_dir):
+            print(f"{C.CYAN}📚 操作文档目录: {docs_dir}{S.RESET_ALL}")
+            import glob
+            for f in sorted(glob.glob(os.path.join(docs_dir, "*.md"))):
+                name = os.path.basename(f).replace(".md", "")
+                print(f"  📄 {name}")
+            print(f"\n{Style.DIM}用 open 命令打开: open docs/{os.listdir(docs_dir)[0] if os.listdir(docs_dir) else ''}{S.RESET_ALL}")
+        else:
+            print(f"{C.YELLOW}📚 docs/ 目录不存在{S.RESET_ALL}")
         return None
 
     if cmd == "windchill":
