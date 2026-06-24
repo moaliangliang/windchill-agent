@@ -12,6 +12,7 @@ import os
 import re
 import time
 from pathlib import Path
+import subprocess
 from typing import Optional
 
 # 使用 HuggingFace 镜像（国内网络）
@@ -111,6 +112,16 @@ def chunk_text(text: str, filename: str = "") -> list[dict]:
                 })
         else:
             final_chunks.append(c)
+
+    # 合并过小的切片（< 80 字符），确保每个切片有足够语义
+    merged = []
+    for c in final_chunks:
+        if merged and len(merged[-1]["text"]) < 80:
+            merged[-1]["text"] += "\n" + c["text"]
+            merged[-1]["header"] = merged[-1]["header"] or c["header"]
+        else:
+            merged.append(c)
+    final_chunks = merged
 
     return final_chunks
 
@@ -213,19 +224,35 @@ class KnowledgeBase:
 
         return f"✅ 知识库已构建: {len(all_chunks)} 个文本块，来自 {len(files)} 篇文档"
 
-    def query(self, text: str, n_results: int = 5) -> list[dict]:
-        """搜索知识库，返回最相关的文本块"""
+    def query(self, text: str, n_results: int = 8) -> list[dict]:
+        """搜索知识库，返回最相关的文本块（向量 + 关键词混合检索）"""
         if not text:
             return []
+        
+        # 1. 向量检索
+        chunks = self._vector_search(text, n_results)
+        
+        # 2. 关键词检索补充（总是执行，补充向量搜索的不足）
+        kw_chunks = self._keyword_search(text, n_results)
+        seen = set(c["text"][:50] for c in chunks)
+        for c in kw_chunks:
+            if c["text"][:50] not in seen:
+                seen.add(c["text"][:50])
+                chunks.append(c)
+        
+        # 按分数排序（score 越低越相关）
+        chunks.sort(key=lambda x: x["score"])
+        return chunks[:n_results]
+
+    def _vector_search(self, text: str, n_results: int) -> list[dict]:
+        """向量检索"""
         embed_fn = self._get_embedding_fn()
         collection = self._get_collection()
-
         query_embedding = embed_fn([text])[0]
         results = collection.query(
             query_embeddings=[query_embedding],
             n_results=n_results,
         )
-
         chunks = []
         for i in range(len(results["ids"][0])):
             chunks.append({
@@ -235,6 +262,58 @@ class KnowledgeBase:
                 "score": results["distances"][0][i] if "distances" in results else 0,
             })
         return chunks
+
+    def _keyword_search(self, text: str, n_results: int) -> list[dict]:
+        """关键词检索：找到匹配最多关键词的文档"""
+        import glob
+        from collections import Counter
+
+        docs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
+        if not os.path.exists(docs_dir):
+            return []
+
+        # 提取关键词（过滤太短的词）
+        import re as _re
+        keywords = [w for w in _re.findall(r'[\w]{2,}', text) if len(w) >= 2]
+
+        doc_scores = Counter()
+        doc_lines = {}
+        for f in glob.glob(os.path.join(docs_dir, "*.md")):
+            fname = os.path.basename(f).replace(".md", "")
+            try:
+                with open(f, encoding="utf-8") as fh:
+                    content = fh.read().lower()
+                score = sum(1 for kw in keywords if kw.lower() in content)
+                if score >= max(2, len(keywords) // 2):  # 至少匹配一半以上关键词
+                    doc_scores[fname] = score
+                    # 找包含最多关键词的那一行
+                    best_line, best_count = "", 0
+                    for line in content.split("\n"):
+                        cnt = sum(1 for kw in keywords if kw.lower() in line)
+                        if cnt > best_count:
+                            best_count = cnt
+                            best_line = line.strip()
+                    doc_lines[fname] = best_line[:200] if best_line else ""
+            except Exception:
+                continue
+
+        results = []
+        for fname, score in doc_scores.most_common(n_results):
+            # 读取文档前 800 字符作为内容（确保有足够上下文）
+            full_text = ""
+            for f in glob.glob(os.path.join(docs_dir, f"{fname}.md")):
+                try:
+                    with open(f, encoding="utf-8") as fh:
+                        full_text = fh.read()[:800]
+                except:
+                    pass
+            results.append({
+                "text": full_text or doc_lines.get(fname, ""),
+                "source": fname,
+                "header": f"关键词匹配 (得分={score})",
+                "score": score * -0.01,
+            })
+        return results
 
     def ask(self, question: str) -> str:
         """搜索知识库 + DeepSeek 生成回答"""
@@ -257,7 +336,7 @@ class KnowledgeBase:
         # 构建上下文
         context = "\n\n---\n\n".join([
             f"[来源: {c['source']} - {c['header']}]\n{c['text'][:1000]}"
-            for c in chunks[:5]
+            for c in chunks[:8]
         ])
 
         # 调用 DeepSeek
@@ -268,7 +347,7 @@ class KnowledgeBase:
                 json={
                     "model": DEEPSEEK_MODEL,
                     "messages": [
-                        {"role": "system", "content": "你是一个 Windchill PLM 专家助手。请基于提供的参考资料回答问题。如果参考资料不足以回答，请如实说不知道。回答要简洁、专业。"},
+                        {"role": "system", "content": "你是一个 Windchill PLM 专家助手。请基于所有提供的参考资料回答问题，不要跳过任何信息。即使看起来是技术命令（如xconfmanager、SQL等），也要包含在回答中。如果参考资料有具体步骤、命令、参数配置，请详细列出。回答要专业、完整、步骤清晰。"},
                         {"role": "user", "content": f"参考资料:\n{context}\n\n问题: {question}"},
                     ],
                     "max_tokens": 1000,
@@ -279,12 +358,12 @@ class KnowledgeBase:
             )
             result = resp.json()
             answer = result["choices"][0]["message"]["content"].strip()
-            sources = "\n".join(f"📄 [{c['source']}] {c['header']}" for c in chunks[:3])
+            sources = "\n".join(f"📄 [{c['source']}] {c['header']}" for c in chunks[:5])
             return f"💡 {answer}\n\n{sources}"
         except Exception as e:
             # 降级为纯检索
             lines = [f"🔍 AI 回答失败 ({e})，返回检索结果:"]
-            for c in chunks[:3]:
+            for c in chunks[:5]:
                 lines.append(f"\n  📄 [{c['source']}] {c['header']}")
                 lines.append(f"  {c['text'][:200]}...")
             return "\n".join(lines)

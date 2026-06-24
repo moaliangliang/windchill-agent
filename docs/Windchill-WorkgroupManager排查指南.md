@@ -1,29 +1,47 @@
-# Windchill Workgroup Manager (WWGM) 排查指南
+# Windchill Workgroup Manager 排查指南
 
-## 概述
-- **用途**: CAD 集成和工作组管理问题排查
-- **相关 CS**: CS384354, CS246687, CS218844, CS131176, CS50545, CS43373
+## 1. WGM 概述
 
-## 1. WFS 服务不可用
-- CS384354: WFS 服务灰色不可用
-- **解决**: 检查 Windows 服务中 PTC WFS Controller 是否运行
+Workgroup Manager 用于 CAD 工具与 Windchill 的集成。
 
-## 2. CAD 无法识别 WWGM
-- CS246687(SolidWorks), CS218844(通用)
-- **解决**: 重新注册 CAD、检查 appregistry.xml、清除 Java 缓存
+### 支持的 CAD 工具
+- Creo Parametric
+- SolidWorks
+- AutoCAD
+- CATIA V5
+- Inventor
 
-## 3. 工作区缓存问题
-- CS131176: 缓存损坏导致工作区无法初始化
-- **最佳实践**: 不跨会话共享缓存，正确设置 PTC_WF_ROOT
+## 2. 常见问题
 
-## 4. 防病毒软件冲突
-- CS50545: creoagent.exe 被防病毒拦截
-- **解决**: 排除 WGM 缓存目录和进程文件
+### 2.1 WGM 无法连接到 Windchill
 
-## 5. 服务器注册失败
-- CS43373: Windchill 服务器无法连接
-- **解决**: 检查 SSL 证书、URL 格式、用户权限
+### 现象
+WGM 启动时报错: `Cannot connect to server`
 
-## 参考资料
-- PTC CS384354, CS246687, CS218844, CS131176, CS50545, CS43373
-- PTC WWGM Release Notes (12.1-13.0)
+### 排查
+1. 检查服务器 URL 是否正确
+2. 测试网络连通性: `ping server -t`
+3. 检查防火墙端口（默认 7380）
+4. 确认 WRS 已正确部署
+
+### 2.2 CAD 文件检入失败
+
+### 现象
+从 WGM 检入 CAD 文件到 Windchill 失败
+
+### 排查
+```bash
+# 检查 Worker Agent 状态
+windchill status
+
+# 查看 CAD 发布日志
+tail -100 $WINDCHILL_HOME/logs/wvs/cad_worker.log
+```
+
+### 2.3 WGM 配置建议
+
+| 配置项 | 推荐值 | 说明 |
+|--------|--------|------|
+| 缓存大小 | 2GB | 避免频繁从服务器加载 |
+| 自动检入 | 启用 | 避免本地修改丢失 |
+| 同步周期 | 30分钟 | 平衡性能和实时性 |

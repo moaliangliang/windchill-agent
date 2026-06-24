@@ -1,26 +1,62 @@
 # Windchill Solr 索引排查指南
 
-## 概述
-- **用途**: Solr 全文搜索索引问题排查
+## 1. Solr 索引概述
 
-## 1. Solr 连接失败
-- 现象: MethodServer 日志报 `Connection refused` to Solr
-- **解决**:
-  1. 检查 Solr 服务是否运行
-  2. 检查 `wt.solr.server.url` 配置
-  3. 重启 Solr 服务
+Windchill 使用 Solr 实现全文搜索功能。
 
-## 2. 搜索无结果
-- 原因: 索引未构建或损坏
-- **解决**: 重建索引
-  ```bash
-  windchill wt.index.SolrIndexRebuild
-  ```
+### 查看 Solr 状态
+```bash
+# 检查 Solr 进程
+ps -ef | grep solr
 
-## 3. 索引构建失败
-- 检查 MethodServer 日志中的具体错误
-- 确认 Solr schema 与 Windchill 版本匹配
+# 查看 Solr 管理页面
+# http://server:8085/solr/#/
+```
 
-## 参考资料
-- PTC Windchill Help Center「Solr Configuration」
-- SPR 相关 (MethodServer 日志报错)
+## 2. 常见问题
+
+### 2.1 搜索无结果
+
+### 现象
+在 Windchill 中搜索零件/文档，返回空
+
+### 排查步骤
+```bash
+# 1. 检查 Solr 是否运行
+curl -s http://localhost:8085/solr/admin/ping | head -5
+
+# 2. 检查索引状态
+curl -s http://localhost:8085/solr/wblib/admin/ping
+
+# 3. 查看 Solr 日志
+tail -200 $WINDCHILL_HOME/solr/server/logs/solr.log | grep -i error
+```
+
+### 2.2 索引不同步
+
+### 解决
+```bash
+# 手动触发全量索引
+windchill com.ptc.windchill.search.SearchAdmin -rebuild
+
+# 或者增量索引
+windchill com.ptc.windchill.search.SearchAdmin -incrementalIndex
+```
+
+### 2.3 Solr 连接失败
+
+### 现象
+MethodServer 日志报: `Solr server refused connection`
+
+### 解决
+```bash
+# 1. 检查端口占用
+netstat -an | grep 8085
+
+# 2. 重启 Solr
+cd $WINDCHILL_HOME/solr/server
+java -jar start.jar &
+
+# 3. 检查 Solr 配置
+cat $WINDCHILL_HOME/codebase/wt.properties | grep solr
+```
