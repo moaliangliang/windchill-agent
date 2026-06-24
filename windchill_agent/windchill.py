@@ -480,11 +480,32 @@ def reject_task(task_id: str, comment: str = "") -> str:
 # 服务器管理 (SSH)
 # ═══════════════════════════════════════════════════════════
 
+def _wc_cmd(cmd_template: str) -> str:
+    """根据服务器操作系统生成 Windchill 命令
+
+    Linux: ./windchill status
+    Windows: windchill status (或 windchill.bat status)
+
+    也处理路径分隔符差异: /opt/Windchill → C:\\Windchill
+    """
+    wh = settings.windchill_home
+    if settings.is_server_windows:
+        wh_win = wh.replace("/", "\\")
+        cmd_template = cmd_template.replace("./windchill", "windchill")
+        cmd_template = cmd_template.replace(f"cd {wh}", f"cd /d {wh_win}")
+        cmd_template = cmd_template.replace(wh, wh_win)
+        cmd_template = cmd_template.replace("sleep 5", "timeout /t 5 /nobreak >nul")
+        cmd_template = cmd_template.replace("ps -ef | grep pmon | grep -v grep",
+                                            'tasklist /FI "IMAGENAME eq oracle.exe" 2>nul')
+        cmd_template = cmd_template.replace("df -h", "wmic logicaldisk get size,freespace,caption")
+    return cmd_template
+
+
 def server_methodserver(action: str = "status") -> str:
     """MethodServer 启停查
 
     通过 SSH 远程管理 Windchill MethodServer。
-    支持查询状态、启动、停止、重启。
+    自动适配 Linux/Windows 服务器命令。
 
     Args:
         action: 操作类型
@@ -503,11 +524,14 @@ def server_methodserver(action: str = "status") -> str:
     """
     from .ssh import run_ssh
     wh = settings.windchill_home
+    wc = "./windchill" if settings.is_server_linux else "windchill"
+    cd = f"cd {wh}/bin" if settings.is_server_linux else f"cd /d {wh}\\bin"
+    sleep = "sleep 5" if settings.is_server_linux else "timeout /t 5 /nobreak >nul"
     commands = {
-        "status": f"cd {wh}/bin && ./windchill status",
-        "start": f"cd {wh}/bin && ./windchill start",
-        "stop": f"cd {wh}/bin && ./windchill stop",
-        "restart": f"cd {wh}/bin && ./windchill stop && sleep 5 && ./windchill start",
+        "status": f"{cd} && {wc} status",
+        "start": f"{cd} && {wc} start",
+        "stop": f"{cd} && {wc} stop",
+        "restart": f"{cd} && {wc} stop & {sleep} & {wc} start",
     }
     cmd = commands.get(action)
     if not cmd:
@@ -520,7 +544,10 @@ def oracle_sql(sql: str) -> str:
     """执行 Oracle SQL 查询
 
     通过 SSH + sqlplus 在 Oracle 数据库上执行任意 SQL 语句。
-    适用于数据查询、统计、修改等操作。
+    自动适配 Linux/Windows 服务器。
+
+    Linux: echo "sql" | sqlplus -S
+    Windows: echo sql | sqlplus -S (PowerShell 兼容)
 
     Args:
         sql: 要执行的 SQL 语句
@@ -550,8 +577,24 @@ def oracle_sql(sql: str) -> str:
     if not sql:
         return "❌ 需要 sql 参数"
     from .ssh import run_ssh
-    sql_clean = sql.replace('"', '\\"')
-    cmd = f'echo "{sql_clean}" | {settings.oracle_home}/bin/sqlplus -S {settings.windchill_odata_user}/{settings.windchill_odata_password}@//{settings.oracle_host}:{settings.oracle_port}/{settings.oracle_sid}'
+    oh = settings.oracle_home
+    user = settings.windchill_odata_user
+    pwd = settings.windchill_odata_password
+    host = settings.oracle_host
+    port = settings.oracle_port
+    sid = settings.oracle_sid
+
+    # 适配不同 OS 的 sqlplus 调用
+    if settings.is_server_linux:
+        sql_clean = sql.replace('"', '\\"')
+        conn_str = f"{user}/{pwd}@//{host}:{port}/{sid}"
+        cmd = f'echo "{sql_clean}" | {oh}/bin/sqlplus -S "{conn_str}"'
+    else:
+        # Windows: 使用临时文件传递 SQL（echo | sqlplus 在 CMD 中会出错）
+        sql_win = sql.replace('"', '\\"')
+        conn_str = f"{user}/{pwd}@//{host}:{port}/{sid}"
+        cmd = f'cmd /c "echo {sql_win} | {oh}\\bin\\sqlplus -S {conn_str}"'
+
     success, output = run_ssh(command=cmd, timeout=30)
     return output if success else f"❌ SQL 执行失败: {output}"
 
@@ -560,11 +603,14 @@ def server_oracle(action: str = "status") -> str:
     """Oracle 数据库运维
 
     通过 SSH 远程管理 Oracle 数据库。
-    支持状态检查、启停、表空间查看等。
+    自动适配 Linux/Windows 服务器命令。
+
+    Linux: ps -ef | grep pmon / sqlplus / as sysdba <<EOF
+    Windows: tasklist /FI "IMAGENAME eq oracle.exe" / sqlplus / as sysdba
 
     Args:
         action: 操作类型
-            - status: 检查 Oracle 运行状态（通过 pmon 进程）
+            - status: 检查 Oracle 运行状态
             - start: 启动 Oracle 数据库
             - stop: 立即关闭 Oracle 数据库
             - tablespace: 查看表空间使用情况
@@ -580,17 +626,27 @@ def server_oracle(action: str = "status") -> str:
         UNDOTBS1          8192      1024
     """
     from .ssh import run_ssh
-    commands = {
-        "status": f"ps -ef | grep pmon | grep -v grep",
-        "start": f"sqlplus / as sysdba <<EOF\nstartup\nEOF",
-        "stop": f"sqlplus / as sysdba <<EOF\nshutdown immediate\nEOF",
-        "tablespace": f"SELECT TABLESPACE_NAME, ROUND(SUM(BYTES)/1024/1024) TOTAL_MB, ROUND(SUM(DECODE(MAXBYTES,0,BYTES,MAXBYTES))/1024/1024) MAX_MB, ROUND((SUM(BYTES)-SUM(DECODE(AUTOEXTENSIBLE,'YES',0,DECODE(MAXBYTES,0,BYTES,MAXBYTES-BYTES)+BYTES,BYTES)))/1024/1024) USED_MB FROM DBA_DATA_FILES GROUP BY TABLESPACE_NAME;",
-    }
+    oh = settings.oracle_home
+
+    if settings.is_server_linux:
+        commands = {
+            "status": "ps -ef | grep pmon | grep -v grep",
+            "start": f"echo startup | {oh}/bin/sqlplus -S / as sysdba",
+            "stop": f"echo shutdown immediate | {oh}/bin/sqlplus -S / as sysdba",
+            "tablespace": f"echo \"SELECT TABLESPACE_NAME, ROUND(SUM(BYTES)/1024/1024) TOTAL_MB, ROUND(SUM(DECODE(MAXBYTES,0,BYTES,MAXBYTES))/1024/1024) MAX_MB, ROUND((SUM(BYTES)-SUM(DECODE(AUTOEXTENSIBLE,'YES',0,DECODE(MAXBYTES,0,BYTES,MAXBYTES-BYTES)+BYTES,BYTES)))/1024/1024) USED_MB FROM DBA_DATA_FILES GROUP BY TABLESPACE_NAME;\" | {oh}/bin/sqlplus -S / as sysdba",
+        }
+    else:
+        oh_win = oh.replace("/", "\\")
+        commands = {
+            "status": 'tasklist /FI "IMAGENAME eq oracle.exe" 2>nul',
+            "start": f"echo startup | {oh_win}\\bin\\sqlplus -S / as sysdba",
+            "stop": f"echo shutdown immediate | {oh_win}\\bin\\sqlplus -S / as sysdba",
+            "tablespace": f'echo SELECT TABLESPACE_NAME, ROUND(SUM(BYTES)/1024/1024) TOTAL_MB, ROUND(SUM(DECODE(MAXBYTES,0,BYTES,MAXBYTES))/1024/1024) MAX_MB, ROUND((SUM(BYTES)-SUM(DECODE(AUTOEXTENSIBLE,\'YES\',0,DECODE(MAXBYTES,0,BYTES,MAXBYTES-BYTES)+BYTES,BYTES)))/1024/1024) USED_MB FROM DBA_DATA_FILES GROUP BY TABLESPACE_NAME | {oh_win}\\bin\\sqlplus -S / as sysdba',
+        }
+
     cmd = commands.get(action)
     if not cmd:
-        return f"❌ 不支持: {action}"
-    if action in ("start", "stop"):
-        cmd = f"echo \"{cmd}\" | {settings.oracle_home}/bin/sqlplus -S / as sysdba"
+        return f"❌ 不支持: {action}（支持: status/start/stop/tablespace）"
     success, output = run_ssh(command=cmd, timeout=60)
     return output if success else f"❌ Oracle 操作失败: {output}"
 
@@ -598,7 +654,10 @@ def server_oracle(action: str = "status") -> str:
 def server_status_full() -> str:
     """全面服务器状态检查
 
-    一次执行多项检查，汇总 Windchill 服务器整体运行状况：
+    一次执行多项检查，汇总 Windchill 服务器整体运行状况。
+    自动适配 Linux/Windows 服务器命令。
+
+    检查项:
       - MethodServer 进程状态
       - Oracle 数据库运行状态
       - 磁盘使用情况
@@ -620,16 +679,28 @@ def server_status_full() -> str:
     wh = settings.windchill_home
     lines = ["📋 Windchill 全面状态检查", "=" * 40]
 
-    s, out = run_ssh(command=f"cd {wh}/bin && ./windchill status 2>&1", timeout=15)
+    if settings.is_server_linux:
+        ms_cmd = f"cd {wh}/bin && ./windchill status 2>&1"
+        or_cmd = "ps -ef | grep pmon | grep -v grep | head -3"
+        df_cmd = f"df -h {wh} | tail -1"
+    else:
+        ms_cmd = f"cd /d {wh}\\bin && windchill status 2>&1"
+        or_cmd = 'tasklist /FI "IMAGENAME eq oracle.exe" 2>nul'
+        df_cmd = f'wmic logicaldisk where caption="C:" get size,freespace /format:csv'
+
+    s, out = run_ssh(command=ms_cmd, timeout=15)
     lines.append(f"\n🖥 MethodServer:\n  {out[:300] if out else '未响应'}")
 
-    s2, out2 = run_ssh(command=f"ps -ef | grep pmon | grep -v grep | head -3", timeout=10)
+    s2, out2 = run_ssh(command=or_cmd, timeout=10)
     lines.append(f"\n🗄 Oracle:\n  {out2[:200] if out2 else '未检测到' if s2 else '无法连接'}")
 
-    s3, out3 = run_ssh(command=f"df -h {wh} | tail -1", timeout=10)
+    s3, out3 = run_ssh(command=df_cmd, timeout=10)
     if out3:
-        parts = out3.split()
-        lines.append(f"\n💾 磁盘: {parts[3] if len(parts) > 3 else '?'} 空闲 ({parts[4] if len(parts) > 4 else '?'} 已用)")
+        if settings.is_server_linux:
+            parts = out3.split()
+            lines.append(f"\n💾 磁盘: {parts[3] if len(parts) > 3 else '?'} 空闲 ({parts[4] if len(parts) > 4 else '?'} 已用)")
+        else:
+            lines.append(f"\n💾 磁盘: {out3[:100]}")
 
     return "\n".join(lines)
 

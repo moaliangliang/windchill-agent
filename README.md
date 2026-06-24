@@ -208,6 +208,7 @@ Oracle实例已关闭...
 | `WINDCHILL_SSH_PASSWORD` | SSH 密码 | 可选 |
 | `WINDCHILL_SSH_KEY` | SSH 私钥路径 | 可选 |
 | `WINDCHILL_HOME` | Windchill 安装目录 | /opt/Windchill |
+| `WINDCHILL_SERVER_OS` | 服务器操作系统（linux/windows） | linux |
 | `ORACLE_HOST` | Oracle 服务器地址 | 可选 |
 | `ORACLE_PORT` | Oracle 端口 | 1521 |
 | `ORACLE_SID` | Oracle SID | 可选 |

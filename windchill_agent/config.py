@@ -64,6 +64,12 @@ class Settings:
         self.windchill_ssh_key: str = self._get("WINDCHILL_SSH_KEY", "")
         self.windchill_home: str = self._get("WINDCHILL_HOME", "/opt/Windchill")
 
+        # 服务器操作系统（影响 SSH 执行的命令语法）
+        raw_server_os: str = self._get("WINDCHILL_SERVER_OS", "linux").lower()
+        self.server_os: str = raw_server_os if raw_server_os in ("linux", "windows") else "linux"
+        self.is_server_linux: bool = self.server_os == "linux"
+        self.is_server_windows: bool = self.server_os == "windows"
+
         # Oracle
         self.oracle_host: str = self._get("ORACLE_HOST", "")
         self.oracle_port: int = int(self._get("ORACLE_PORT", "1521"))
@@ -131,13 +137,15 @@ class Settings:
         return bool(self.windchill_ssh_host and self.windchill_ssh_user)
 
     def summary(self) -> str:
-        lines = [f"📋 当前配置 [操作系统: {self.os_type}]"]
+        lines = [f"📋 当前配置"]
+        lines.append(f"  🖥 客户端: {self.os_type}")
+        lines.append(f"  🖥 服务器: {self.server_os}")
         if self.is_windchill_configured:
-            lines.append(f"  Windchill: {self.windchill_host}:{self.windchill_port}")
+            lines.append(f"  🌐 Windchill: {self.windchill_host}:{self.windchill_port}")
         if self.is_ssh_configured:
-            lines.append(f"  SSH: {self.windchill_ssh_user}@{self.windchill_ssh_host}:{self.windchill_ssh_port}")
-        lines.append(f"  Oracle: {'已配置' if self.oracle_host else '未配置'}")
-        lines.append(f"  企业微信: {'已配置' if self.wecom_webhook or self.wecom_corp_id else '未配置'}")
+            lines.append(f"  🔗 SSH: {self.windchill_ssh_user}@{self.windchill_ssh_host}:{self.windchill_ssh_port}")
+        lines.append(f"  🗄 Oracle: {'已配置' if self.oracle_host else '未配置'}")
+        lines.append(f"  💬 企业微信: {'已配置' if self.wecom_webhook or self.wecom_corp_id else '未配置'}")
         return "\n".join(lines)
 
 
