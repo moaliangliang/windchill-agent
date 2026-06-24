@@ -168,6 +168,40 @@ UNDOTBS1          8192      1024
 | `WECOM_AGENT_ID` | 企业微信 AgentID | 可选 |
 | `WECOM_CORP_SECRET` | 企业微信 Secret | 可选 |
 
+## DeepSeek 配置（知识库问答用）
+
+`ask` 命令需要 DeepSeek API Key 才能生成回答。不配置时自动降级为纯检索模式（只返回文档片段，无 AI 回答）。
+
+### 方法 1：.env 文件（推荐）
+
+```bash
+# 编辑 .env 文件
+echo 'DEEPSEEK_API_KEY=sk-your-key-here' >> ~/workspace/windchill-agent/.env
+```
+
+### 方法 2：环境变量
+
+```bash
+export DEEPSEEK_API_KEY="sk-your-key-here"
+```
+
+### 方法 3：复用 knowagent 的配置
+
+如果你已有 knowagent 项目，DeepSeek Key 会自动从 `~/workspace/knowagent/.env` 读取。
+
+### 验证配置
+
+```bash
+windchill config
+# 如果 DeepSeek 已配置，ask 命令会返回 AI 生成的回答
+# 如果未配置，ask 只返回文字片段
+
+windchill ask "MethodServer 如何排查故障"
+```
+
+> 💡 DeepSeek API Key 获取：https://platform.deepseek.com → API Keys → 创建新的 Key
+> 💡 免费额度：注册即送 500 万 tokens，足以日常使用
+
 ## 跨平台说明
 
 - **Windows**: `python agent.py`（cmd 或 PowerShell 均可）

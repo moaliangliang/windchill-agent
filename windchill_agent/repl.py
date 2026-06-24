@@ -57,7 +57,18 @@ HELP_TEXT = f"""
 
 交互模式直接输入命令:
   methodserver restart
-  oracle tablespace{S.RESET_ALL}
+  oracle tablespace
+
+{Style.BRIGHT}DeepSeek 配置:{S.RESET_ALL}
+  ask 命令需要 DeepSeek API Key 才能生成 AI 回答。
+  未配置时自动降级为片段检索。
+
+  配置方式:
+  1. 编辑 .env: echo 'DEEPSEEK_API_KEY=sk-xxx' >> .env
+  2. 环境变量: export DEEPSEEK_API_KEY="sk-xxx"
+  3. 自动读取: knowagent 项目的 .env
+
+  Key 获取: https://platform.deepseek.com → API Keys{S.RESET_ALL}
 """
 
 
