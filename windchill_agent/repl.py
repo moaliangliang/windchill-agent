@@ -29,47 +29,71 @@ S = Style
 # ── 帮助信息 ──────────────────────────────────────────────
 
 HELP_TEXT = f"""
-{C.CYAN}Windchill Agent — 跨平台 Windchill/Oracle 运维工具{S.RESET_ALL}
-{'=' * 50}
+{C.CYAN}Windchill Agent v1.0 — 54 个工具 · 跨平台 Windchill/Oracle 运维{S.RESET_ALL}
+{'=' * 60}
 
-{Style.BRIGHT}Windchill 操作:{S.RESET_ALL}
-  {C.GREEN}status{S.RESET_ALL}                检查 Windchill 服务器状态
-  {C.GREEN}full_status{S.RESET_ALL}           全面服务器检查（MS+Oracle+磁盘）
-  {C.GREEN}part <编码>{S.RESET_ALL}            按物料编码查询零件
-  {C.GREEN}parts{S.RESET_ALL}                 最近零件列表
-  {C.GREEN}bom <编码>{S.RESET_ALL}            查询 BOM
-  {C.GREEN}docs{S.RESET_ALL}                  文档列表
-  {C.GREEN}users{S.RESET_ALL}                 用户列表
-  {C.GREEN}tasks{S.RESET_ALL}                 待办任务
-  {C.GREEN}cr{S.RESET_ALL}                    变更申请
-  {C.GREEN}co{S.RESET_ALL}                    变更单
+{Style.BRIGHT}查询类 (15):{S.RESET_ALL}
+  {C.GREEN}status                          {S.RESET_ALL}服务器状态
+  {C.GREEN}full_status                     {S.RESET_ALL}全面检查(MS+Oracle+磁盘)
+  {C.GREEN}part <编码>{S.RESET_ALL}                    按编码查零件
+  {C.GREEN}parts{S.RESET_ALL}                          最近零件列表
+  {C.GREEN}query_by_name <名称>{S.RESET_ALL}            按名称查零件
+  {C.GREEN}bom <编码>{S.RESET_ALL}                      查 BOM
+  {C.GREEN}docs [number=编码]{S.RESET_ALL}              文档列表/搜索
+  {C.GREEN}users [search=关键词]{S.RESET_ALL}           用户列表/搜索
+  {C.GREEN}tasks [user=用户名]{S.RESET_ALL}             待办任务
+  {C.GREEN}cr / co{S.RESET_ALL}                         变更申请 / 变更单
+  {C.GREEN}logs [file_pattern=xxx]{S.RESET_ALL}         日志列表
+  {C.GREEN}view_log <filename>{S.RESET_ALL}             查看日志内容
+  {C.GREEN}get_parts_list{S.RESET_ALL}                  零件清单列表
+  {C.GREEN}list_events{S.RESET_ALL}                     事件列表
 
-{Style.BRIGHT}服务器管理:{S.RESET_ALL}
-  {C.GREEN}methodserver <status/start/stop>{S.RESET_ALL}  MethodServer 控制
-  {C.GREEN}oracle <status/tablespace>{S.RESET_ALL}        Oracle 运维
-  {C.GREEN}sql <SQL>{S.RESET_ALL}             执行 Oracle SQL
-  {C.GREEN}logs [file_pattern=xxx]{S.RESET_ALL}  查询日志列表
-  {C.GREEN}view_log <filename>{S.RESET_ALL}      查看日志内容
+{Style.BRIGHT}创建/修改类 (14):{S.RESET_ALL}
+  {C.GREEN}create_part <编码> <名称>{S.RESET_ALL}       创建零件
+  {C.GREEN}create_co / create_cr{S.RESET_ALL}           创建变更单/申请
+  {C.GREEN}create_document <编码> <名称>{S.RESET_ALL}   创建文档
+  {C.GREEN}add_bom_item <编码> <子件> [数量]{S.RESET_ALL} BOM 添加子件
+  {C.GREEN}delete_bom_item <编码> <子件>{S.RESET_ALL}   BOM 删除子件
+  {C.GREEN}revise_part / update_part <编码>{S.RESET_ALL} 修订/更新零件
+  {C.GREEN}delete_part / obsolete_part <编码>{S.RESET_ALL} 删除/报废零件
+  {C.GREEN}set_preference <name> <value>{S.RESET_ALL}   设置首选项
 
-{Style.BRIGHT}审批操作:{S.RESET_ALL}
-  {C.GREEN}approve <task_id>{S.RESET_ALL}      审批任务
-  {C.GREEN}reject <task_id> <原因>{S.RESET_ALL} 驳回任务
+{Style.BRIGHT}审批/任务类 (5):{S.RESET_ALL}
+  {C.GREEN}approve <task_id> [comment]{S.RESET_ALL}     审批任务
+  {C.GREEN}reject <task_id> <原因>{S.RESET_ALL}         驳回任务
+  {C.GREEN}reassign_task <task_id> <用户>{S.RESET_ALL}  转派任务
+  {C.GREEN}save_workitem <task_id> [comment]{S.RESET_ALL} 保存工作项
+
+{Style.BRIGHT}服务器管理 (9):{S.RESET_ALL}
+  {C.GREEN}methodserver <status/start/stop>{S.RESET_ALL}   MethodServer 控制
+  {C.GREEN}worker_agent_status{S.RESET_ALL}                Worker Agent 状态
+  {C.GREEN}worker_control <action> [name] [host]{S.RESET_ALL} Worker Agent 控制
+  {C.GREEN}oracle <status/tablespace>{S.RESET_ALL}         Oracle 运维
+  {C.GREEN}oracle_backup <expdp/rman>{S.RESET_ALL}         Oracle 备份
+  {C.GREEN}sql <SQL>{S.RESET_ALL}                          执行 Oracle SQL
+  {C.GREEN}system_clone / system_rehost{S.RESET_ALL}       系统克隆/迁移
+  {C.GREEN}add_worker <name> <host>{S.RESET_ALL}           添加工作器
+
+{Style.BRIGHT}XML 生成 (4):{S.RESET_ALL}
+  {C.GREEN}generate_type_xml / generate_class_xml{S.RESET_ALL}   类型/分类 XML
+  {C.GREEN}generate_lifecycle_xml / generate_oir_xml{S.RESET_ALL} 生命周期/OIR XML
 
 {Style.BRIGHT}其他:{S.RESET_ALL}
-  {C.GREEN}wecom <content>{S.RESET_ALL}        发送企业微信消息
-  {C.GREEN}docs{S.RESET_ALL}                  打开操作文档目录
-
-{Style.BRIGHT}系统:{S.RESET_ALL}
-  {C.GREEN}config{S.RESET_ALL}                查看配置（含OS类型）
-  {C.GREEN}help{S.RESET_ALL}                  显示帮助
-  {C.GREEN}exit/quit{S.RESET_ALL}             退出
+  {C.GREEN}wecom <content>{S.RESET_ALL}                    发送企业微信消息
+  {C.GREEN}config{S.RESET_ALL}                             查看配置（含OS类型）
+  {C.GREEN}docs{S.RESET_ALL}                               打开操作文档目录
+  {C.GREEN}help / exit{S.RESET_ALL}                        帮助 / 退出
+  {Style.DIM}所有命令支持简写: query_by_name → query_by_name 或 query_by_name{S.RESET_ALL}
 
 {Style.DIM}示例:
-  part NRV-SV-01-P01-01015    查零件
-  bom NRV-SV-01-P01-01015     查 BOM
-  oracle tablespace           查看表空间
-  sql SELECT * FROM...        执行 SQL
-  methodserver restart        重启 MethodServer{S.RESET_ALL}
+  part NRV-SV-01-P01-01015          查零件
+  bom NRV-SV-01-P01-01015           查 BOM
+  create_part A-001 测试零件         创建零件
+  add_bom_item A-001 B-001 qty=2    BOM 添加子件
+  oracle tablespace                 查看表空间
+  worker_agent_status               查看 Worker 状态
+  methodserver restart              重启 MethodServer
+  system_clone output_dir=/tmp      克隆系统{S.RESET_ALL}
 """
 
 
