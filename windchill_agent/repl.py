@@ -30,63 +30,36 @@ S = Style
 # ── 帮助信息 ──────────────────────────────────────────────
 
 HELP_TEXT = f"""
-{C.CYAN}Windchill Agent v1.0 — 54 个工具 · 跨平台 Windchill/Oracle 运维{S.RESET_ALL}
-{'=' * 60}
+{C.CYAN}Windchill Agent v1.0 -- SSH 运维工具 . 10 个核心命令{S.RESET_ALL}
+{"=" * 60}
 
-{Style.BRIGHT}查询类 (15):{S.RESET_ALL}
-  {C.GREEN}status / server{S.RESET_ALL}                  服务器状态
-  {C.GREEN}full_status{S.RESET_ALL}                      全面检查(MS+Oracle+磁盘)
-  {C.GREEN}part / name <编码>{S.RESET_ALL}               查零件（编码或名称）
-  {C.GREEN}parts{S.RESET_ALL}                            最近零件列表
-  {C.GREEN}bom <编码>{S.RESET_ALL}                       查 BOM
-  {C.GREEN}docs / groups / users / tasks{S.RESET_ALL}    文档/组/用户/任务
-  {C.GREEN}cr / co{S.RESET_ALL}                          变更申请 / 变更单
-  {C.GREEN}logs / events{S.RESET_ALL}                    日志 / 事件列表
-  {C.GREEN}view_log <filename>{S.RESET_ALL}              查看日志内容
-  {C.GREEN}partlists / problems / variances{S.RESET_ALL}  清单/问题/偏差
-
-{Style.BRIGHT}创建/修改类 (8):{S.RESET_ALL}
-  {C.GREEN}create_part <编码> <名称>{S.RESET_ALL}        创建零件
-  {C.GREEN}revise / update <编码>{S.RESET_ALL}            修订/更新零件
-  {C.GREEN}obsolete <编码>{S.RESET_ALL}                   报废零件
-  {C.GREEN}preference <name> <value>{S.RESET_ALL}         设置首选项
-
-{Style.BRIGHT}审批/任务类 (5):{S.RESET_ALL}
-  {C.GREEN}approve / reject <task_id>{S.RESET_ALL}        审批 / 驳回任务
-  {C.GREEN}reassign <task_id> <用户>{S.RESET_ALL}         转派任务
-  {C.GREEN}save_wi <task_id> [comment]{S.RESET_ALL}       保存工作项
-
-{Style.BRIGHT}服务器管理 (9):{S.RESET_ALL}
+{Style.BRIGHT}服务器管理:{S.RESET_ALL}
   {C.GREEN}methodserver <status/start/stop>{S.RESET_ALL}    MethodServer 控制
-  {C.GREEN}worker_status / worker <action>{S.RESET_ALL}     Worker Agent
   {C.GREEN}oracle <status/tablespace>{S.RESET_ALL}          Oracle 运维
-  {C.GREEN}backup <expdp/rman>{S.RESET_ALL}                 Oracle 备份
-  {C.GREEN}sql <SQL>{S.RESET_ALL}                           执行 SQL
-  {C.GREEN}clone / rehost{S.RESET_ALL}                      系统克隆/迁移
+  {C.GREEN}sql <SQL>{S.RESET_ALL}                           执行 Oracle SQL
+  {C.GREEN}full_status{S.RESET_ALL}                         全面状态(MS+Oracle+磁盘)
+  {C.GREEN}logs [file_pattern=xxx]{S.RESET_ALL}             查询日志列表
+  {C.GREEN}view_log <filename>{S.RESET_ALL}                 查看日志内容
 
-{Style.BRIGHT}XML 生成 (4):{S.RESET_ALL}
-  {C.GREEN}gen_type / gen_class{S.RESET_ALL}              类型/分类 XML
-  {C.GREEN}gen_lifecycle / gen_oir{S.RESET_ALL}           生命周期/OIR XML
+{Style.BRIGHT}审批操作:{S.RESET_ALL}
+  {C.GREEN}approve <task_id> [comment]{S.RESET_ALL}         审批任务
+  {C.GREEN}reject <task_id> <原因>{S.RESET_ALL}             驳回任务
 
 {Style.BRIGHT}其他:{S.RESET_ALL}
-  {C.GREEN}wecom <content>{S.RESET_ALL}                    发送企业微信消息
-  {C.GREEN}config{S.RESET_ALL}                             查看配置（含OS类型）
-  {C.GREEN}ask <问题>{S.RESET_ALL}                          智能问答（RAG + DeepSeek）
-  {C.GREEN}search <关键词>{S.RESET_ALL}                      搜索操作文档
-  {C.GREEN}kb_build{S.RESET_ALL}                            构建/更新知识库索引
-  {C.GREEN}docs{S.RESET_ALL}                               打开操作文档目录
-  {C.GREEN}help / exit{S.RESET_ALL}                        帮助 / 退出
-  {Style.DIM}所有命令支持简写: query_by_name → query_by_name 或 query_by_name{S.RESET_ALL}
+  {C.GREEN}create_part <编码> <名称>{S.RESET_ALL}           创建零件
+  {C.GREEN}wecom <content>{S.RESET_ALL}                     发送企业微信消息
+  {C.GREEN}ask <问题>{S.RESET_ALL}                          智能问答（RAG）
+  {C.GREEN}kb_build{S.RESET_ALL}                            构建知识库
+  {C.GREEN}config{S.RESET_ALL}                              查看配置
+  {C.GREEN}help / exit{S.RESET_ALL}                         帮助 / 退出
 
-{Style.DIM}示例:
-  part NRV-SV-01-P01-01015          查零件
-  bom NRV-SV-01-P01-01015           查 BOM
-  create_part A-001 测试零件         创建零件
-  add_bom_item A-001 B-001 qty=2    BOM 添加子件
-  oracle tablespace                 查看表空间
-  worker_agent_status               查看 Worker 状态
-  methodserver restart              重启 MethodServer
-  system_clone output_dir=/tmp      克隆系统{S.RESET_ALL}
+{Style.DIM}所有操作基于 SSH，无需 OData API。
+示例:
+  methodserver restart       重启 MethodServer
+  oracle tablespace          查看表空间
+  sql SELECT * FROM...       执行 SQL
+  logs file_pattern=Method   查日志
+  approve 12345              审批任务{S.RESET_ALL}
 """
 
 
