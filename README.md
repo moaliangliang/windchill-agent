@@ -243,7 +243,6 @@ SSH 依赖 `paramiko` 库，Windows/macOS/Linux 均可正常工作。
 | `Windchill-变更管理流程.md` | 变更申请/变更单流程 |
 | `Windchill-产品结构导出指南.md` | 产品结构数据导出 |
 | `Windchill-图纸发布流程.md` | 工程图纸发布流程 |
-| `WRS安装说明.md` | WRS 安装部署说明 |
 
 在交互终端输入 `docs` 查看文档列表，或用 `open docs/filename.md` 打开。
 
