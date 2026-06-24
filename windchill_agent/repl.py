@@ -8,6 +8,7 @@ from typing import Optional
 
 from .config import settings
 from .windchill import TOOLS, TOOL_ALIASES, execute as windchill_execute
+from .kb import kb as knowledge_base
 
 try:
     from colorama import init, Fore, Style, Back
@@ -81,7 +82,9 @@ HELP_TEXT = f"""
 {Style.BRIGHT}其他:{S.RESET_ALL}
   {C.GREEN}wecom <content>{S.RESET_ALL}                    发送企业微信消息
   {C.GREEN}config{S.RESET_ALL}                             查看配置（含OS类型）
+  {C.GREEN}ask <问题>{S.RESET_ALL}                          智能问答（RAG + DeepSeek）
   {C.GREEN}search <关键词>{S.RESET_ALL}                      搜索操作文档
+  {C.GREEN}kb_build{S.RESET_ALL}                            构建/更新知识库索引
   {C.GREEN}docs{S.RESET_ALL}                               打开操作文档目录
   {C.GREEN}help / exit{S.RESET_ALL}                        帮助 / 退出
   {Style.DIM}所有命令支持简写: query_by_name → query_by_name 或 query_by_name{S.RESET_ALL}
@@ -119,7 +122,10 @@ def parse_input(text: str) -> tuple:
             remaining.append(arg)
 
     # 剩余参数按位置匹配
-    if cmd == "search":
+    if cmd in ("ask", "query", "问题"):
+        if remaining:
+            params["keyword"] = " ".join(remaining)
+    elif cmd == "search":
         if remaining:
             params["keyword"] = " ".join(remaining)
     elif cmd in ("part", "bom", "number"):
@@ -182,6 +188,24 @@ def execute_command(cmd: str, params: dict) -> Optional[str]:
                 print(f"{C.YELLOW}❌ 未找到「{keyword}」相关文档{S.RESET_ALL}")
         else:
             print(f"{C.YELLOW}📚 docs/ 目录不存在{S.RESET_ALL}")
+        return None
+
+    if cmd in ("kb_build", "build_kb", "rebuild"):
+        print(f"{C.CYAN}📚 正在构建知识库...{S.RESET_ALL}")
+        result = knowledge_base.build()
+        print(result)
+        return None
+
+    if cmd in ("ask", "query", "问题"):
+        question = params.get("keyword", params.get("text", ""))
+        if not question:
+            question = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
+        if not question:
+            print(f"{C.YELLOW}请输入问题，如: ask BOM 怎么搭建{S.RESET_ALL}")
+            return None
+        print(f"{C.CYAN}🤔 思考中...{S.RESET_ALL}")
+        result = knowledge_base.ask(question)
+        print(result)
         return None
 
     if cmd == "search":
